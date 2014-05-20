@@ -15,6 +15,7 @@
 #include "Display.h"
 #include "Keypad.h"
 #include "ADC.h"
+#include "StateMachineControl.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>

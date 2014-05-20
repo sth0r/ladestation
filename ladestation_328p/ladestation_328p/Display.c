@@ -84,3 +84,64 @@ void Disp_clear (void)
 {
 	Disp_command(0x01);      // Send command '0x01' (Display Clear)
 }
+
+/*
+void Disp_printState(state printState)
+{
+	switch(printState)
+	{
+		case stateIdle :
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Welcome");
+			Disp_GotoXY(1,2);
+			Disp_printString("Swipe card");
+		}
+		break;
+		case stateTypePassword :
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Type password");
+			Disp_GotoXY(1,2);
+		}
+		break;
+		case stateUnknownCard :
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Card Unknown");
+			_delay_ms(2000);
+		}
+		break;
+		case stateWrongPassword :
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Wrong Password");
+			Disp_GotoXY(1,2);
+			Disp_printString("Try again:");
+			//_delay_ms(2000);
+		}
+		case stateDisableCard :
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Card Blocked");
+			Disp_GotoXY(1,2);
+			Disp_printString("Contact Service");
+			_delay_ms(2000);
+		}
+		case stateCardReadError :
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Card read error");
+			Disp_GotoXY(1,2);
+			Disp_printString("Swipe again");
+			_delay_ms(2000);
+		}
+		default : state=stateIdle; break;
+	}
+} */
