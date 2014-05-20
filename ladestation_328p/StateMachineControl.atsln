@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Atmel Studio Solution File, Format Version 11.00
-Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "StateMachineControl", "StateMachineControl\StateMachineControl.cproj", "{1D85F402-9628-4F76-850C-FD36ADF2598C}"
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "StateMachineControl", "ladestation_328p\StateMachineControl.cproj", "{1D85F402-9628-4F76-850C-FD36ADF2598C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
