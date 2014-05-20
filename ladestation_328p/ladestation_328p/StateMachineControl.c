@@ -10,6 +10,9 @@
 #define INTERVAL_READKEYS 9
 #define ACK 0x86
 #define CLIENT_ID "001"
+#define START_CHAR "%%"
+#define STOP_CHAR "*"
+#define VALIDATE_COMMAND "V"
 enum state {stateIdle, stateCarConnected, stateCardSwiped, stateTypePassword, stateWrongPassword, stateCharging, stateChargingStopped, stateDisconnectCar, stateUploadToDB, stateDBoffline, stateUnknownCard, stateDisableCard,stateCardReadError,stateConnectCar,stateErrorState};
 int state = stateIdle;
 //uint16_t interruptCount = 0;
@@ -17,7 +20,8 @@ volatile bool runSec = false,readKeys = false, uartRecived = false, cardPresent 
 unsigned int uartData;
 char uID[12] = "";
 char displayBuffer[64] = "";
-char comBuffer[32] = "";
+char comBuffer[64] = "";
+char comPacket[64] = "";
 
 void RFID_init()
 {
@@ -30,7 +34,18 @@ void RFID_init()
 
 ISR(USART_RX_vect)
 {
+	int i = 0; 
 	uartData = UDR0;
+	if(uartData != '*')
+	{                          // the zero termination of the string
+		comBuffer[i] = uartData;      // Send the value of the pointer address
+		i++;                    // Increment pointer
+	}
+	else
+	{
+		comPacket = comBuffer;
+		i = 0;
+	}
 	uartRecived = true;
 	//UART_Transmit(uartData);
 }
@@ -180,6 +195,7 @@ void GetUID()
 	startReadTimeout = true;
 	cardPresent = false;
 	while(!dataReady || !readTimeout);
+	startReadTimeout = false;
 	if (dataReady)
 	{
 		UART_Transmit_String("Data Ready \n");
@@ -190,7 +206,7 @@ void GetUID()
 		if (SPDR == ACK)
 		{
 			sprintf(displayBuffer, "UID = ");
-			for (int i = 1; i <= 4; i++)
+			for (int i = 1; i <= 7; i++)
 			{
 				PORTB &= ~(1<<PORTB2); // SS low to start transfer
 				SPI_MasterTransmit(0xF5); // Send dummy data
@@ -198,12 +214,12 @@ void GetUID()
 				_delay_us(100);
 				sprintf(comBuffer, "%X", SPDR);
 				strcat(displayBuffer,comBuffer);
-				strcat(uID, comBuffer);
 				//Disp_char('0'+i);
 			}
 			strcat(displayBuffer,"\n");
 			UART_Transmit_String(displayBuffer);
-			UART_Transmit_String(uID);
+			strncpy(uID, displayBuffer+6, 8);
+			//UART_Transmit_String(uID);
 			gotUID = true;
 		}
 		else
@@ -223,11 +239,13 @@ void GetUID()
 
 bool CardKnown()
 {
-	/*sprintf(comBuffer, "%");
+	sprintf(comBuffer, START_CHAR);
 	strcat(comBuffer, CLIENT_ID);
+	strcat(comBuffer, VALIDATE_COMMAND);
 	strcat(comBuffer, uID);
-	strcat(comBuffer, "*");
-	UART_Transmit_String(comBuffer); // validate packet*/
+	strcat(comBuffer, STOP_CHAR);
+	UART_Transmit_String(comBuffer); // validate packet
+	UART_Transmit_String("\n");
 	return true;
 }
 
@@ -248,7 +266,7 @@ int main(void)
 	uint16_t data=0, lastData=0;
 	int preState = 99;
 	SPI_MasterInit();
-	UART_init();
+	UART_Init();
 	RFID_init();
 	Timer_init();
 	Disp_init();

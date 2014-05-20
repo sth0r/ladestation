@@ -9,8 +9,8 @@
 #ifndef INCFILE1_H_
 #define INCFILE1_H_
 
-extern void UART_init();
-extern char UART_receive();
+extern void UART_Init();
+extern char UART_Receive();
 extern void UART_Transmit(char data);
 extern void UART_Transmit_String(char *str);
 

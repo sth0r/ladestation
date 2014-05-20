@@ -1,6 +1,6 @@
 #include "Macroes.h"
 
-void UART_init()
+void UART_Init()
 {
 	//SREG = (1<<I); //Enable global interrupts // Same as: sei();
 	/* Enable receiver and transmitter */
@@ -13,7 +13,7 @@ void UART_init()
 	UBRR0L = 0x67; // 19200
 }
 
-char UART_receive()
+char UART_Receive()
 {
 	/* Wait for data to be received */
 	while ( !(UCSR0A & (1<<RXC0)) );
@@ -37,3 +37,16 @@ void UART_Transmit_String(char *str)
 		str++;                    // Increment pointer
 	}
 }
+
+/*void UART_Receive_String(char *buffer)
+{
+	//int i = 0;
+	if (uartRecived)              // Continue until the pointer reaches -
+	{  
+		while(uartData != "*")
+		{                           // the zero termination of the string
+		*buffer = uartData;      // Send the value of the pointer address
+		buffer++;                    // Increment pointer
+		}	
+	}
+}*/
