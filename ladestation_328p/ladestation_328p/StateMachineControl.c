@@ -12,16 +12,18 @@
 #define CLIENT_ID "001"
 #define START_CHAR "%%"
 #define STOP_CHAR "*"
-#define VALIDATE_COMMAND "V"
+#define VALIDATE_CARD_COMMAND 'V'
 enum state {stateIdle, stateCarConnected, stateCardSwiped, stateTypePassword, stateWrongPassword, stateCharging, stateChargingStopped, stateDisconnectCar, stateUploadToDB, stateDBoffline, stateUnknownCard, stateDisableCard,stateCardReadError,stateConnectCar,stateErrorState};
 int state = stateIdle;
+int dataIndex = 0;
 //uint16_t interruptCount = 0;
-volatile bool runSec = false,readKeys = false, uartRecived = false, cardPresent = false, dataReady = false, keypadActive = false,gotUID = false, readTimeout = false,startReadTimeout = false; // Bool variables
+volatile bool runSec = false,readKeys = false, uartRecived = false, cardPresent = false, dataReady = false, keypadActive = false,gotUID = false, readTimeout = false,startReadTimeout = false, packetReceived = false; // Bool variables
 unsigned int uartData;
 char uID[12] = "";
 char displayBuffer[64] = "";
 char comBuffer[64] = "";
-char comPacket[64] = "";
+char receiveBuffer[64] = "";
+//char comPacket[64] = "";
 
 void RFID_init()
 {
@@ -34,20 +36,13 @@ void RFID_init()
 
 ISR(USART_RX_vect)
 {
-	int i = 0; 
-	uartData = UDR0;
-	if(uartData != '*')
-	{                          // the zero termination of the string
-		comBuffer[i] = uartData;      // Send the value of the pointer address
-		i++;                    // Increment pointer
-	}
-	else
+	receiveBuffer[dataIndex] = UDR0;
+	if (receiveBuffer[dataIndex] == '*')
 	{
-		comPacket = comBuffer;
-		i = 0;
+		dataIndex = 0;
+		packetReceived = true;
 	}
-	uartRecived = true;
-	//UART_Transmit(uartData);
+	else dataIndex++;
 }
 
 ISR(TIMER1_COMPA_vect) // Comes every 1ms
@@ -219,7 +214,7 @@ void GetUID()
 			strcat(displayBuffer,"\n");
 			UART_Transmit_String(displayBuffer);
 			strncpy(uID, displayBuffer+6, 8);
-			//UART_Transmit_String(uID);
+			UART_Transmit_String(uID);
 			gotUID = true;
 		}
 		else
@@ -237,16 +232,64 @@ void GetUID()
 	}
 }
 
+void SendCommand(char command)
+{
+	char commandString[1];
+	sprintf(commandString, "%c", command);
+	sprintf(comBuffer, START_CHAR);
+	strcat(comBuffer, CLIENT_ID);
+	strcat(comBuffer, commandString);
+	switch(command)
+	{
+		case 'V':
+		{
+			strcat(comBuffer, uID);
+		}
+		break;
+	}
+	strcat(comBuffer, STOP_CHAR);
+	UART_Transmit_String(comBuffer);
+	/*char commandString[1];
+	sprintf(commandString, "%c", command);
+	sprintf(comBuffer, START_CHAR);
+	strcat(comBuffer, CLIENT_ID);
+	strcat(comBuffer, commandString);
+	strcat(comBuffer, uID);
+	strcat(comBuffer, STOP_CHAR);
+	UART_Transmit_String(comBuffer);*/
+}
+
 bool CardKnown()
 {
-	sprintf(comBuffer, START_CHAR);
+	char validate[1] = "0";
+	/*sprintf(comBuffer, START_CHAR);
 	strcat(comBuffer, CLIENT_ID);
 	strcat(comBuffer, VALIDATE_COMMAND);
 	strcat(comBuffer, uID);
 	strcat(comBuffer, STOP_CHAR);
-	UART_Transmit_String(comBuffer); // validate packet
-	UART_Transmit_String("\n");
-	return true;
+	UART_Transmit_String(comBuffer); // validate packet*/
+	//UART_Transmit_String("\n");
+	//startReadTimeout = true;
+	//while(!packetReceived || !readTimeout);
+	//startReadTimeout = false;
+	SendCommand(VALIDATE_CARD_COMMAND);
+	packetReceived = false;
+	while(!packetReceived);
+	UART_Transmit_String("receiveBuffer content\n");
+	UART_Transmit_String(receiveBuffer);
+	strncpy(validate, receiveBuffer+5, 1);
+	UART_Transmit_String("validate char\n");
+	UART_Transmit_String(validate);
+	sprintf(receiveBuffer, "0");
+	memset(&receiveBuffer[0], 0, strlen(receiveBuffer));
+	if (strcmp(validate,"T") == 0)
+	{
+		return true;
+	} 
+	else
+	{
+		return false;
+	}
 }
 
 bool ValidatePassword()
@@ -413,40 +456,6 @@ int main(void)
 				default : state=stateErrorState; break;
 			}
 		}
-		
-		/*
-		if (dataReady) // Interrupt 1. From RFID
-		{
-			UART_Transmit_String("Data Ready \n");
-			PORTB &= ~(1<<PORTB2); // SS low to start transfer
-			SPI_MasterTransmit(0xF5); // Send dummy data
-			PORTB |= (1<<PORTB2); // SS high to end transfer
-			_delay_us(100);
-			if (SPDR == ACK)
-			{
-				sprintf(displayBuffer, "UID = ");
-				for (int i = 1; i <= 7; i++)
-				{
-					PORTB &= ~(1<<PORTB2); // SS low to start transfer
-					SPI_MasterTransmit(0xF5); // Send dummy data
-					PORTB |= (1<<PORTB2); // SS high to end transfer
-					_delay_us(100);
-					sprintf(comBuffer, "%X", SPDR);
-					strcat(displayBuffer,comBuffer);
-					//Disp_char('0'+i);
-				}
-				strcat(displayBuffer,"\n");
-				UART_Transmit_String(displayBuffer);
-				gotUID = true;
-			}
-			else
-			{
-				UART_Transmit_String("Command failed \n");
-				gotUID = false;
-			}
-			dataReady = false;
-		}
-		*/
 	}
 	
 	
