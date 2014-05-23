@@ -9,6 +9,6 @@
 #ifndef KEYBOARD_DRIVER_H_
 #define KEYBOARD_DRIVER_H_
 
-extern unsigned char KBDchar (uint8_t charReturn);
+extern char KBDchar (uint8_t charReturn);
 
 #endif /* KEYBOARD_DRIVER_H_ */

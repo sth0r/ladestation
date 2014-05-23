@@ -8,8 +8,8 @@
 
 #ifndef STATEMACHINECONTROL_H_
 #define STATEMACHINECONTROL_H_
-
-//enum state {stateIdle, stateCarConnected, stateCardSwiped, stateTypePassword, stateWrongPassword, stateCharging, stateChargingStopped, stateDisconnectCar, stateUploadToDB, stateDBoffline, stateUnknownCard, stateDisableCard,stateCardReadError,stateConnectCar};
+//typedef enum {stateIdle, stateCarConnected, stateCardSwiped, stateTypePassword, stateWrongPassword, stateCharging, stateChargingStopped, stateDisconnectCar, stateUploadToDB, stateDBoffline, stateUnknownCard, stateDisableCard,stateCardReadError,stateConnectCar}state ;
+//extern enum state {stateIdle, stateCarConnected, stateCardSwiped, stateTypePassword, stateWrongPassword, stateCharging, stateChargingStopped, stateDisconnectCar, stateUploadToDB, stateDBoffline, stateUnknownCard, stateDisableCard,stateCardReadError,stateConnectCar};
 //extern enum state;
 
 #endif /* STATEMACHINECONTROL_H_ */

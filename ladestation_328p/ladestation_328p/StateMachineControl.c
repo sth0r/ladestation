@@ -7,22 +7,27 @@
 #include "Macroes.h"
 #define INTERVAL_SEC 1000
 #define INTERVAL_READ_TIMEOUT 100
+#define INTERVAL_CONNECT_CAR_TIMEOUT 10000
 #define INTERVAL_READKEYS 9
+#define KR_PR_MWS 0.5
 #define ACK 0x86
 #define CLIENT_ID "001"
 #define START_CHAR "%%"
 #define STOP_CHAR "*"
 #define VALIDATE_CARD_COMMAND 'V'
+#define LOGIN_COMMAND 'L'
 enum state {stateIdle, stateCarConnected, stateCardSwiped, stateTypePassword, stateWrongPassword, stateCharging, stateChargingStopped, stateDisconnectCar, stateUploadToDB, stateDBoffline, stateUnknownCard, stateDisableCard,stateCardReadError,stateConnectCar,stateErrorState};
 int state = stateIdle;
 int dataIndex = 0;
 //uint16_t interruptCount = 0;
-volatile bool runSec = false,readKeys = false, uartRecived = false, cardPresent = false, dataReady = false, keypadActive = false,gotUID = false, readTimeout = false,startReadTimeout = false, packetReceived = false; // Bool variables
+volatile bool takeSample = false,chargingActive = false,readKeys = false, uartRecived = false, cardPresent = false, dataReady = false, keypadActive = false,gotUID = false, readTimeout = false,connectCarTimeout = false,startReadTimeout = false,startConnectCarTimeout = false, packetReceived = false,cancel = false; // Bool variables
 unsigned int uartData;
 char uID[12] = "";
 char displayBuffer[64] = "";
 char comBuffer[64] = "";
 char receiveBuffer[64] = "";
+char password[4];
+char passResult[4];
 //char comPacket[64] = "";
 
 void RFID_init()
@@ -47,17 +52,27 @@ ISR(USART_RX_vect)
 
 ISR(TIMER1_COMPA_vect) // Comes every 1ms
 {
-	volatile static uint16_t count1Sec = INTERVAL_SEC,count9ms = INTERVAL_READKEYS, count100ms = INTERVAL_READ_TIMEOUT;
-	if ((--count1Sec) ==0)  // Do if 1 minus countSec = 0
+	volatile static uint16_t count1Sec = INTERVAL_SEC,count9ms = INTERVAL_READKEYS, count100ms = INTERVAL_READ_TIMEOUT,count10Sec = INTERVAL_CONNECT_CAR_TIMEOUT;
+	if (chargingActive)
 	{
-		count1Sec = INTERVAL_SEC; // 1000
-		//runSec = true;      // Set runSec to 1. Activating this function to be run next time
+		if ((--count1Sec) ==0)  // Do if 1 minus countSec = 0
+		{
+			count1Sec = INTERVAL_SEC; // 1000
+			takeSample = true;      // Set runSec to 1. Activating this function to be run next time
+		}
 	}
-	if (((--count9ms) ==0) && (keypadActive))  // Do if 1 minus count9ms = 0 and keypadActive = true
+	else count1Sec = INTERVAL_SEC;
+	
+	if (keypadActive)
 	{
-		count9ms = INTERVAL_READKEYS; //
-		readKeys = true;      // Set readKeys to 1. Activating this function to be run next time
+		if ((--count9ms) ==0)  // Do if 1 minus count9ms = 0 and keypadActive = true
+		{
+			count9ms = INTERVAL_READKEYS; //
+			readKeys = true;      // Set readKeys to 1. Activating this function to be run next time
+		}
 	}
+	else count9ms = INTERVAL_READKEYS;
+	
 	if (startReadTimeout)
 	{
 		if ((--count100ms) ==0)  // Do if 1 minus count9ms = 0 and keypadActive = true
@@ -66,10 +81,17 @@ ISR(TIMER1_COMPA_vect) // Comes every 1ms
 			readTimeout = true;      // Set readKeys to 1. Activating this function to be run next time
 		}
 	}
-	else
+	else count100ms = INTERVAL_READ_TIMEOUT;
+
+	if (startConnectCarTimeout)
 	{
-		count100ms = INTERVAL_READ_TIMEOUT;
+		if ((--count10Sec) ==0)  // Do if 1 minus count9ms = 0 and keypadActive = true
+		{
+			count10Sec = INTERVAL_CONNECT_CAR_TIMEOUT; //
+			connectCarTimeout = true;      // Set readKeys to 1. Activating this function to be run next time
+		}
 	}
+	else count10Sec = INTERVAL_CONNECT_CAR_TIMEOUT;
 }
 
 ISR(INT0_vect)
@@ -91,95 +113,6 @@ void Timer_init()
 	TIMSK1 = (1<<OCIE1A);            // Enable interrupt compare match
 }
 
-void Disp_printState()
-{
-	switch(state)
-	{
-		case stateIdle :
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("Welcome");
-			Disp_GotoXY(1,2);
-			Disp_printString("Swipe card");
-		}
-		break;
-		case stateTypePassword :
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("type password");
-			Disp_GotoXY(1,2);
-		}
-		break;
-		case stateUnknownCard :
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("card unknown");
-			_delay_ms(2000);
-		}
-		break;
-		case stateWrongPassword :
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("wrong password");
-			Disp_GotoXY(1,2);
-			Disp_printString("try again:");
-			//_delay_ms(2000);
-		}
-		break;
-		case stateDisableCard :
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("card blocked");
-			Disp_GotoXY(1,2);
-			Disp_printString("contact service");
-			_delay_ms(2000);
-		}
-		break;
-		case stateCardReadError :
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("card read error");
-			Disp_GotoXY(1,2);
-			Disp_printString("swipe again");
-			_delay_ms(2000);
-		}
-		break;
-		case stateCharging:
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("charging data");
-			Disp_GotoXY(1,2);
-			Disp_printString("xxxxxxxxxxxx");
-		}
-		break;
-		case stateConnectCar:
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("Connect Car");
-			Disp_GotoXY(1,2);
-			Disp_printString("to continue");
-		}
-		break;
-		case stateErrorState :
-		{
-			Disp_clear();
-			Disp_GotoXY(1,1);
-			Disp_printString("Error State");
-			_delay_ms(2000);
-		}
-		break;
-		default : state=stateErrorState; break;
-	}
-}
-
 void GetUID()
 {
 	PORTB &= ~(1<<PORTB2); // SS low to start transfer
@@ -189,8 +122,9 @@ void GetUID()
 	//_delay_us(100000);
 	startReadTimeout = true;
 	cardPresent = false;
-	while(!dataReady || !readTimeout);
+	while((!dataReady) || (!readTimeout));
 	startReadTimeout = false;
+	readTimeout = false;
 	if (dataReady)
 	{
 		UART_Transmit_String("Data Ready \n");
@@ -246,67 +180,170 @@ void SendCommand(char command)
 			strcat(comBuffer, uID);
 		}
 		break;
+		case 'L': // Packet: %001LxxxUIDxxPASS
+		{
+			strcat(comBuffer, uID);
+			strcat(comBuffer, password);
+		}
+		break;
 	}
 	strcat(comBuffer, STOP_CHAR);
+	UART_Transmit_String("Packet send\n");
 	UART_Transmit_String(comBuffer);
-	/*char commandString[1];
-	sprintf(commandString, "%c", command);
-	sprintf(comBuffer, START_CHAR);
-	strcat(comBuffer, CLIENT_ID);
-	strcat(comBuffer, commandString);
-	strcat(comBuffer, uID);
-	strcat(comBuffer, STOP_CHAR);
-	UART_Transmit_String(comBuffer);*/
 }
 
 bool CardKnown()
 {
-	char validate[1] = "0";
-	/*sprintf(comBuffer, START_CHAR);
-	strcat(comBuffer, CLIENT_ID);
-	strcat(comBuffer, VALIDATE_COMMAND);
-	strcat(comBuffer, uID);
-	strcat(comBuffer, STOP_CHAR);
-	UART_Transmit_String(comBuffer); // validate packet*/
-	//UART_Transmit_String("\n");
-	//startReadTimeout = true;
-	//while(!packetReceived || !readTimeout);
-	//startReadTimeout = false;
+	//char validateCompare[6] = "%001AV*";
 	SendCommand(VALIDATE_CARD_COMMAND);
 	packetReceived = false;
+	//startReadTimeout = true;
+	//while(!packetReceived || !readTimeout); // Implement when com is working
+	//startReadTimeout = false;
+	
 	while(!packetReceived);
 	UART_Transmit_String("receiveBuffer content\n");
-	UART_Transmit_String(receiveBuffer);
-	strncpy(validate, receiveBuffer+5, 1);
-	UART_Transmit_String("validate char\n");
-	UART_Transmit_String(validate);
-	sprintf(receiveBuffer, "0");
-	memset(&receiveBuffer[0], 0, strlen(receiveBuffer));
-	if (strcmp(validate,"T") == 0)
+	UART_Transmit_String(receiveBuffer); //Packet expected: %001Atrue*
+	memcpy(passResult,receiveBuffer+5, 4);
+	passResult[4] = '\0';   /* null character manually added */
+	UART_Transmit_String("validate card passResult content\n");
+	UART_Transmit_String(passResult);
+	memset(receiveBuffer, '\0', sizeof(receiveBuffer));
+	if (strncmp (passResult,"true",4) == 0)
 	{
 		return true;
 	} 
 	else
 	{
-		return false;
+		return true;
 	}
 }
 
 bool ValidatePassword()
 {
-	keypadActive = true;
-	return true;
+	for (int i = 0; i < 4;)
+	{
+		char keyP = KBDchar(1);
+		if (keyP != 0 && keyP != 'C')
+		{
+			password[i] = keyP;
+			Disp_char(keyP);
+			i++;
+		} 
+		else if (keyP == 'C')
+		{
+			cancel = true;
+			return false;
+		}
+	}
+	UART_Transmit_String("Password typed\n");
+	UART_Transmit_String(password);
+	SendCommand(LOGIN_COMMAND);
+	packetReceived = false;
+	//startReadTimeout = true;
+	//while(!packetReceived || !readTimeout); // Implement when com is working
+	//startReadTimeout = false;
+	while(!packetReceived);
+	UART_Transmit_String("receiveBuffer content\n");
+	UART_Transmit_String(receiveBuffer); //Packet expected: %001A00000001001truexxxx*
+	
+	memcpy(passResult,receiveBuffer+16, 4);
+	passResult[4] = '\0';   /* null character manually added */
+	UART_Transmit_String("passwordResult content\n");
+	UART_Transmit_String(passResult);
+	memset(receiveBuffer, '\0', sizeof(receiveBuffer));
+	if (strncmp (passResult,"true",4) == 0) // if (strncmp (receiveBuffer,"%001A00000001001true",20) == 0)
+	{
+		return true;
+	}
+	else
+	{
+		return true;
+	}
 }
 
 bool CarConnected()
 {
-	return true;
+	startConnectCarTimeout = true;
+	UART_Transmit_String("wait for timeout\n");
+	//while(!carConnected || !connectCarTimeout); // Timeout virker ikke på denne måde?
+	while(1)
+	{
+		if((ADC_Sample() > 10) || (connectCarTimeout)) break;
+	}
+	startConnectCarTimeout = false;
+	if (!connectCarTimeout)
+	{
+		return true;
+	} 
+	else 
+	{
+		UART_Transmit_String("connect car timeout\n");
+		connectCarTimeout = false;
+		return false;
+	}
+}
+
+void BeginCharging()
+{
+	double energy=0, power=0, price = 0;
+	uint16_t data=0, lastData=0;
+	keypadActive = true;
+	chargingActive = true;
+	while (chargingActive)
+	{
+		if (takeSample)
+		{
+			data=ADC_Sample();
+			if((lastData!=data) && data > 0) //Only update display if needed (any change)
+			{
+				Disp_GotoXY(13,1);
+				sprintf(displayBuffer, "%4u", data);
+				Disp_printString(displayBuffer);
+				//if (data == 0) power = 0; // Avoid dividing by zero
+				//else power = (double)data/409,2; //((2/5)*1023);   //mW 0.4*1023 = 409.2 // uW 0.4*1.023
+				power = (double)data/409.2; //((2/5)*1023);   //mW 0.4*1023 = 409.2 // uW 0.4*1.023
+				Disp_GotoXY(3,1);
+				sprintf(displayBuffer, "%.2f", power);
+				Disp_printString(displayBuffer);
+				lastData=data;
+			}
+			else if (data == 0) chargingActive = false;
+			//else chargingDone = true;
+			energy += power;
+			Disp_GotoXY(3,2);
+			if (energy < 9999) sprintf(displayBuffer, "%.1f", energy);
+			else sprintf(displayBuffer, "%5.f", energy);
+			Disp_printString(displayBuffer);
+			price = energy*KR_PR_MWS;
+			Disp_GotoXY(11,2);
+			if (price < 99) sprintf(displayBuffer, "%.1f", price);
+			else sprintf(displayBuffer, "%4.f", price);
+			//sprintf(displayBuffer, "%.1f", price);
+			Disp_printString(displayBuffer);
+			takeSample = false;
+		}
+		if (readKeys)
+		{
+			char keyP = KBDchar(1);
+			if (keyP == 'C') chargingActive = false;
+			readKeys = false;
+		}
+	}
+	keypadActive = false;
+}
+bool UploadFinishedCharge()
+{
+	return false;
+}
+
+void TryConnection()
+{
+	while(1);
 }
 
 int main(void)
 {
-	double energy=0, power=0;
-	uint16_t data=0, lastData=0;
 	int preState = 99;
 	SPI_MasterInit();
 	UART_Init();
@@ -315,7 +352,6 @@ int main(void)
 	Disp_init();
 	ADC_init();
 	sei();
-	Disp_printString("x");
 	//Disp_printString("P:     mW A:");
 	//Disp_GotoXY(1,2);
 	//Disp_printString("E:     mWs");
@@ -341,7 +377,8 @@ int main(void)
 						UART_Transmit_String("Card Present \n");
 						GetUID();
 						preState = state;
-						state=stateCardSwiped;
+						//state=stateCardSwiped;
+						state = stateConnectCar;
 					}
 					else preState = state;
 				}
@@ -367,11 +404,18 @@ int main(void)
 					}
 					else
 					{
-						UART_Transmit_String("Did not get UID \n");
-						Disp_printState(stateCardReadError);
 						preState = state;
-						state = stateIdle;
+						state = stateCardReadError;
 					}
+				}
+				break;
+				
+				case stateCardReadError:
+				{
+					UART_Transmit_String("Did not get UID \n");
+					Disp_printState(state);
+					preState = state;
+					state = stateIdle;
 				}
 				break;
 				
@@ -394,8 +438,17 @@ int main(void)
 					}
 					else
 					{
-						preState = state;
-						state = stateWrongPassword;
+						if (cancel)
+						{
+							cancel = false;
+							preState = state;
+							state = stateIdle;
+						} 
+						else
+						{
+							preState = state;
+							state = stateWrongPassword;
+						}
 					}
 				}
 				break;
@@ -439,8 +492,63 @@ int main(void)
 				{
 					UART_Transmit_String("stateCharging \n");
 					Disp_printState(state);
+					BeginCharging();
 					preState = state;
-					//state = stateIdle;
+					state = stateChargingStopped;
+				}
+				break;
+				
+				case stateChargingStopped:
+				{
+					UART_Transmit_String("stateChargingStopped \n");
+					Disp_printState(state);
+					if (ADC_Sample() > 10)
+					{
+						preState = state;
+						state = stateDisconnectCar;
+					} 
+					else
+					{
+						preState = state;
+						state = stateUploadToDB;
+					}
+				}
+				break;
+				
+				case stateDisconnectCar:
+				{
+					UART_Transmit_String("stateDisconnectCar \n");
+					Disp_printState(state);
+					while (ADC_Sample() > 10);
+					preState = state;
+					state = stateUploadToDB;
+				}
+				break;
+				
+				case stateUploadToDB:
+				{
+					UART_Transmit_String("stateUploadToDB \n");
+					Disp_printState(state);
+					if (UploadFinishedCharge())
+					{
+						preState = state;
+						state = stateIdle;
+					} 
+					else
+					{
+						preState = state;
+						state = stateDBoffline;
+					}
+				}
+				break;
+				
+				case stateDBoffline:
+				{
+					UART_Transmit_String("stateDBoffline \n");
+					Disp_printState(state);
+					TryConnection();
+					preState = state;
+					state = stateIdle;
 				}
 				break;
 				
@@ -456,47 +564,5 @@ int main(void)
 				default : state=stateErrorState; break;
 			}
 		}
-	}
-	
-	
-	
-	if (readKeys)
-	{
-		unsigned char keyP = KBDchar(1);
-		if (keyP != 0) Disp_char(keyP);
-		readKeys = false;
-	}
-	
-	if (runSec)
-	{
-		//Disp_GotoXY(1,2);
-		//sprintf(adc, "%u", ADC_Sample());
-		//Disp_printString(adc);
-
-		data=ADC_Sample();
-		if((lastData!=data) && (data>0)) //Only update lcd if needed and data is not 0
-		{
-			Disp_GotoXY(13,1);
-			sprintf(displayBuffer, "%4u", data);
-			Disp_printString(displayBuffer);
-			power = (double)data/409,2; //((2/5)*1023);   //mW 0.4*1023 = 409.2 // uW 0.4*1.023
-			Disp_GotoXY(3,1);
-			sprintf(displayBuffer, "%.2f", power);
-			Disp_printString(displayBuffer);
-			lastData=data;
-		}
-		else if (data==0)
-		{
-			Disp_GotoXY(13,1);
-			sprintf(displayBuffer, "%4u", data);
-			Disp_printString(displayBuffer);
-			power = 0;
-		}
-		energy += power;
-		Disp_GotoXY(3,2);
-		if (energy < 1000) sprintf(displayBuffer, "%.1f", energy);
-		else sprintf(displayBuffer, "%5.f", energy);
-		Disp_printString(displayBuffer);
-		runSec = false;
 	}
 }

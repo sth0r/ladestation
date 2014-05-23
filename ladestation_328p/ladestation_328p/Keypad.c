@@ -9,9 +9,9 @@
 #include <avr/io.h>
 #include "Macroes.h"
 
-unsigned char KeyTranslate (uint8_t keyData)
+char KeyTranslate (uint8_t keyData)
 {
-	unsigned char kbdChar = 0;
+	char kbdChar = 0;
 	switch  (keyData)
 	{
 		case 0b01110111: kbdChar='1'; break;
@@ -69,10 +69,10 @@ bool debounced = false;
 	return debounced;
 }
 
-unsigned char KBDchar (uint8_t charReturn)
+char KBDchar (uint8_t charReturn)
 {
 	uint8_t keyData;
-	unsigned static char keyPrevious = 0, keyPressed = 0;
+	static char keyPrevious = 0, keyPressed = 0;
 
 	DDRC  |= (1<<PORTC0)|(1<<PORTC1)|(1<<PORTC2)|(1<<PORTC3);//C udgang
 	PORTC &= (0<<PORTC0)&(0<<PORTC1)&(0<<PORTC2)&(0<<PORTC3);//C lav

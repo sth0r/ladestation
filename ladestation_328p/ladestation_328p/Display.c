@@ -1,5 +1,6 @@
 #include "Macroes.h"
 static uint8_t displayAddress = 1;
+enum state {stateIdle, stateCarConnected, stateCardSwiped, stateTypePassword, stateWrongPassword, stateCharging, stateChargingStopped, stateDisconnectCar, stateUploadToDB, stateDBoffline, stateUnknownCard, stateDisableCard,stateCardReadError,stateConnectCar,stateErrorState};
 
 void Disp_char(char data)
 {
@@ -85,10 +86,10 @@ void Disp_clear (void)
 	Disp_command(0x01);      // Send command '0x01' (Display Clear)
 }
 
-/*
-void Disp_printState(state printState)
+
+void Disp_printState(int state)
 {
-	switch(printState)
+	switch(state)
 	{
 		case stateIdle :
 		{
@@ -96,14 +97,16 @@ void Disp_printState(state printState)
 			Disp_GotoXY(1,1);
 			Disp_printString("Welcome");
 			Disp_GotoXY(1,2);
-			Disp_printString("Swipe card");
+			Disp_printString("Swipe Card");
 		}
 		break;
 		case stateTypePassword :
 		{
 			Disp_clear();
 			Disp_GotoXY(1,1);
-			Disp_printString("Type password");
+			Disp_printString("Type Password");
+			Disp_GotoXY(7,2);
+			Disp_printString("C = cancel");
 			Disp_GotoXY(1,2);
 		}
 		break;
@@ -111,7 +114,7 @@ void Disp_printState(state printState)
 		{
 			Disp_clear();
 			Disp_GotoXY(1,1);
-			Disp_printString("Card Unknown");
+			Disp_printString("card unknown");
 			_delay_ms(2000);
 		}
 		break;
@@ -119,29 +122,87 @@ void Disp_printState(state printState)
 		{
 			Disp_clear();
 			Disp_GotoXY(1,1);
-			Disp_printString("Wrong Password");
+			Disp_printString("wrong password");
 			Disp_GotoXY(1,2);
-			Disp_printString("Try again:");
-			//_delay_ms(2000);
+			Disp_printString("try again");
+			_delay_ms(2000);
 		}
+		break;
 		case stateDisableCard :
 		{
 			Disp_clear();
 			Disp_GotoXY(1,1);
-			Disp_printString("Card Blocked");
+			Disp_printString("card blocked");
 			Disp_GotoXY(1,2);
-			Disp_printString("Contact Service");
+			Disp_printString("contact service");
 			_delay_ms(2000);
 		}
+		break;
 		case stateCardReadError :
 		{
 			Disp_clear();
 			Disp_GotoXY(1,1);
-			Disp_printString("Card read error");
+			Disp_printString("card read error");
 			Disp_GotoXY(1,2);
-			Disp_printString("Swipe again");
+			Disp_printString("swipe again");
 			_delay_ms(2000);
 		}
-		default : state=stateIdle; break;
+		break;
+		case stateCharging:
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("P:     mW A:");
+			Disp_GotoXY(1,2);
+			Disp_printString("E:     mWS    kr");
+		}
+		break;
+		case stateChargingStopped:
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Charging stopped");
+			_delay_ms(2000);
+		}
+		break;
+		case stateConnectCar:
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Connect Car");
+			Disp_GotoXY(1,2);
+			Disp_printString("to continue");
+		}
+		break;
+		case stateDisconnectCar:
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Disconnect Car");
+		}
+		break;
+		case stateUploadToDB:
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Uploading data");
+		}
+		break;
+		case stateDBoffline :
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Charger Offline");
+		}
+		break;
+		case stateErrorState :
+		{
+			Disp_clear();
+			Disp_GotoXY(1,1);
+			Disp_printString("Error State");
+			_delay_ms(2000);
+		}
+		break;
+		default : state=stateErrorState; break;
 	}
-} */
+}
