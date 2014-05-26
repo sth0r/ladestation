@@ -2,7 +2,6 @@
 
 void SPI_MasterInit()
 {
-	
 	// Set MOSI and SCK  & SS output, all others input
 	DDRB |= (1<<DDB5)|(1<<DDB3)|(1<<DDB2);// PB5 = SCK, PB3 = MOSI, PB2 = SS(No effect when output)
 	//PORTB |= (1<<PORTB2); //Pull up resistor on SS input to ensure Master mode

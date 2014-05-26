@@ -4,8 +4,6 @@
  * Created: 14-03-2014 10:25:17
  *  Author: Alex
  */ 
-
-
 #include <avr/io.h>
 #include "Macroes.h"
 

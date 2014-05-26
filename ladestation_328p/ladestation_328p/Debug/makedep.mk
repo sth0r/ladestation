@@ -4,6 +4,8 @@
 
 ADC.c
 
+DataControl.c
+
 Display.c
 
 Keypad.c

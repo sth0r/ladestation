@@ -9,6 +9,7 @@
 #ifndef MACROES_H_
 #define MACROES_H_
 
+#include <stdbool.h>
 #include "avr/interrupt.h"
 #include "SPI.h"
 #include "UART.h"
@@ -16,7 +17,8 @@
 #include "Keypad.h"
 #include "ADC.h"
 #include "StateMachineControl.h"
-#include <stdbool.h>
+#include "DataControl.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
