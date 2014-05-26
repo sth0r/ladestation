@@ -5,7 +5,6 @@
  *  Author: T
  */ 
 #include "Macroes.h"
-//#include "StateMachineControl.h"
 char uID[12] = "";
 char displayBuffer[64] = "";
 char comBuffer[64] = "";
@@ -14,6 +13,7 @@ char passResult[5] = "";
 char amountKr[5] = "";
 char amountOere[3] = "";
 char timeStamp[6] = "";
+char taID[9] = "";
 volatile unsigned int usedOere=0, usedKr=0;
 char receiveBuffer[64] = "";
 volatile unsigned int timeChargedInSeconds = 0;
@@ -23,12 +23,9 @@ void GetUID()
 	PORTB &= ~(1<<PORTB2); // SS low to start transfer
 	SPI_MasterTransmit('U'); //0x55 Command get UID
 	PORTB |= (1<<PORTB2); // SS high to end transfer
-	//UART_Transmit_String("Get UID \n");
-	//_delay_us(100000);
 	startComTimeout = true;
 	cardPresent = false;
-	//while((!dataReady) || (!comTimeout));
-	while(1)
+	while(1)//while((!dataReady) || (!comTimeout)); Virker ikke på denne måde?
 	{
 		if((dataReady) || (comTimeout)) break;
 	}
@@ -97,6 +94,7 @@ void SendCommand(char command)
 		break;
 		case 'C': // Packet: % 001 C UID----- KR-- Oe Time- *
 		{
+			strcat(comBuffer, taID);
 			strcat(comBuffer, uID);
 			strcat(comBuffer, amountKr);
 			strcat(comBuffer, amountOere);
@@ -113,18 +111,6 @@ void SendCommand(char command)
 	strcat(comBuffer, STOP_CHAR);
 	UART_Transmit_String("Packet send\n");
 	UART_Transmit_String(comBuffer);
-	//sprintf(amountKr, "%04u", usedKr);
-	//sprintf(amountOere, "%02u", usedOere);
-	//sprintf(timeStamp, "%05u", timeChargedInSeconds);
-	//UART_Transmit_String("\nKr ");
-	//sprintf(amountKr, "%04u", usedKr);
-	//UART_Transmit_String(amountKr);
-	//UART_Transmit_String("\nOere ");
-	//sprintf(amountOere, "%02u", usedOere);
-	//UART_Transmit_String(amountOere);
-	//UART_Transmit_String("\nTime in seconds");
-	//sprintf(timeStamp, "%05u", timeChargedInSeconds);
-	//UART_Transmit_String(timeStamp);
 }
 
 bool CardKnown()
@@ -132,9 +118,6 @@ bool CardKnown()
 	SendCommand(VALIDATE_CARD_COMMAND);
 	packetReceived = false;
 	startComTimeout = true;
-	//while(!packetReceived || !comTimeout); // Implement when com is working
-	//startReadTimeout = false;
-	//while(!packetReceived);
 	while(1)
 	{
 		if((packetReceived) || (comTimeout)) break;
@@ -164,7 +147,6 @@ bool CardKnown()
 		UART_Transmit_String("Cardknown communication timeout\n");
 		return false;
 	}
-	
 }
 
 bool ValidatePassword()
@@ -189,9 +171,6 @@ bool ValidatePassword()
 	SendCommand(LOGIN_COMMAND);
 	packetReceived = false;
 	startComTimeout = true;
-	//while(!packetReceived || !comTimeout); // Implement when com is working
-	//startReadTimeout = false;
-	//while(!packetReceived);
 	while(1)
 	{
 		if((packetReceived) || (comTimeout)) break;
@@ -201,13 +180,15 @@ bool ValidatePassword()
 	if (packetReceived)
 	{
 		UART_Transmit_String("receiveBuffer content\n");
-		UART_Transmit_String(receiveBuffer); //Packet expected: %001A00000001001truexxxx*
-		memcpy(passResult,receiveBuffer+16, 4);
+		UART_Transmit_String(receiveBuffer); //Packet expected: %001A00000001---UID--truexxxx*
+		memcpy(passResult,receiveBuffer+21, 4);
 		passResult[4] = '\0';   /* null character manually added */
+		memcpy(taID,receiveBuffer+5, 8);
+		taID[9] = '\0';   /* null character manually added */
 		UART_Transmit_String("passwordResult content\n");
 		UART_Transmit_String(passResult);
 		memset(receiveBuffer, '\0', sizeof(receiveBuffer));
-		if (strncmp (passResult,"true",4) == 0) // if (strncmp (receiveBuffer,"%001A00000001001true",20) == 0)
+		if (strncmp (passResult,"true",4) == 0)
 		{
 			return true;
 		}
@@ -280,7 +261,6 @@ bool CarConnected()
 {
 	startConnectCarTimeout = true;
 	UART_Transmit_String("wait for timeout\n");
-	//while(!carConnected || !connectCarTimeout); // Timeout virker ikke på denne måde?
 	while(1)
 	{
 		if((ADC_Sample() > 10) || (connectCarTimeout)) break;
@@ -315,8 +295,6 @@ void BeginCharging()
 				Disp_GotoXY(13,1);
 				sprintf(displayBuffer, "%4u", data);
 				Disp_printString(displayBuffer);
-				//if (data == 0) power = 0; // Avoid dividing by zero
-				//else power = (double)data/409,2; //((2/5)*1023);   //mW 0.4*1023 = 409.2 // uW 0.4*1.023
 				power = (double)data/409.2; //((2/5)*1023);   //mW 0.4*1023 = 409.2 // uW 0.4*1.023
 				Disp_GotoXY(3,1);
 				sprintf(displayBuffer, "%.2f", power);
