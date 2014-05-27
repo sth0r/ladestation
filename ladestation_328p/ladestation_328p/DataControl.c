@@ -168,6 +168,7 @@ bool ValidatePassword()
 	}
 	UART_Transmit_String("Password typed\n");
 	UART_Transmit_String(password);
+	memset(receiveBuffer, '\0', sizeof(receiveBuffer));
 	SendCommand(LOGIN_COMMAND);
 	packetReceived = false;
 	startComTimeout = true;
@@ -179,12 +180,14 @@ bool ValidatePassword()
 	comTimeout = false;
 	if (packetReceived)
 	{
-		UART_Transmit_String("receiveBuffer content\n");
-		UART_Transmit_String(receiveBuffer); //Packet expected: %001A00000001---UID--truexxxx*
+		//UART_Transmit_String("receiveBuffer content\n");
+		//UART_Transmit_String(receiveBuffer); //Packet expected: %001A00000001---UID--truexxxx*
 		memcpy(passResult,receiveBuffer+21, 4);
 		passResult[4] = '\0';   /* null character manually added */
 		memcpy(taID,receiveBuffer+5, 8);
 		taID[9] = '\0';   /* null character manually added */
+		UART_Transmit_String("TAID content\n");
+		UART_Transmit_String(taID);
 		UART_Transmit_String("passwordResult content\n");
 		UART_Transmit_String(passResult);
 		memset(receiveBuffer, '\0', sizeof(receiveBuffer));
