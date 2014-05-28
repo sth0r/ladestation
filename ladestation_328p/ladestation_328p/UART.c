@@ -37,16 +37,3 @@ void UART_Transmit_String(char *str)
 		str++;                    // Increment pointer
 	}
 }
-
-/*void UART_Receive_String(char *buffer)
-{
-	//int i = 0;
-	if (uartRecived)              // Continue until the pointer reaches -
-	{  
-		while(uartData != "*")
-		{                           // the zero termination of the string
-		*buffer = uartData;      // Send the value of the pointer address
-		buffer++;                    // Increment pointer
-		}	
-	}
-}*/

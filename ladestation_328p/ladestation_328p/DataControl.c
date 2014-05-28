@@ -33,7 +33,7 @@ void GetUID()
 	comTimeout = false;
 	if (dataReady)
 	{
-		UART_Transmit_String("Data Ready \n");
+		//UART_Transmit_String("Data Ready \n");
 		PORTB &= ~(1<<PORTB2); // SS low to start transfer
 		SPI_MasterTransmit(0xF5); // Send dummy data
 		PORTB |= (1<<PORTB2); // SS high to end transfer
@@ -52,7 +52,7 @@ void GetUID()
 				//Disp_char('0'+i);
 			}
 			strcat(displayBuffer,"\n");
-			UART_Transmit_String(displayBuffer);
+			//UART_Transmit_String(displayBuffer);
 			strncpy(uID, displayBuffer+6, 8);
 			UART_Transmit_String(uID);
 			gotUID = true;
@@ -109,7 +109,7 @@ void SendCommand(char command)
 		default : command='E'; break;
 	}
 	strcat(comBuffer, STOP_CHAR);
-	UART_Transmit_String("Packet send\n");
+	//UART_Transmit_String("Packet send\n");
 	UART_Transmit_String(comBuffer);
 }
 
@@ -126,12 +126,12 @@ bool CardKnown()
 	comTimeout = false;
 	if (packetReceived)
 	{
-		UART_Transmit_String("receiveBuffer content\n");
-		UART_Transmit_String(receiveBuffer); //Packet expected: %001Atrue*
+		//UART_Transmit_String("receiveBuffer content\n");
+		//UART_Transmit_String(receiveBuffer); //Packet expected: %001Atrue*
 		memcpy(passResult,receiveBuffer+5, 4);
 		passResult[4] = '\0';   /* null character manually added */
-		UART_Transmit_String("validate card passResult content\n");
-		UART_Transmit_String(passResult);
+		//UART_Transmit_String("validate card passResult content\n");
+		//UART_Transmit_String(passResult);
 		memset(receiveBuffer, '\0', sizeof(receiveBuffer));
 		if (strncmp (passResult,"true",4) == 0)
 		{
@@ -166,8 +166,8 @@ bool ValidatePassword()
 			return false;
 		}
 	}
-	UART_Transmit_String("Password typed\n");
-	UART_Transmit_String(password);
+	//UART_Transmit_String("Password typed\n");
+	//UART_Transmit_String(password);
 	memset(receiveBuffer, '\0', sizeof(receiveBuffer));
 	SendCommand(LOGIN_COMMAND);
 	packetReceived = false;
@@ -186,10 +186,10 @@ bool ValidatePassword()
 		passResult[4] = '\0';   /* null character manually added */
 		memcpy(taID,receiveBuffer+5, 8);
 		taID[9] = '\0';   /* null character manually added */
-		UART_Transmit_String("TAID content\n");
-		UART_Transmit_String(taID);
-		UART_Transmit_String("passwordResult content\n");
-		UART_Transmit_String(passResult);
+		//UART_Transmit_String("TAID content\n");
+		//UART_Transmit_String(taID);
+		//UART_Transmit_String("passwordResult content\n");
+		//UART_Transmit_String(passResult);
 		memset(receiveBuffer, '\0', sizeof(receiveBuffer));
 		if (strncmp (passResult,"true",4) == 0)
 		{
@@ -212,7 +212,6 @@ bool UploadFinishedCharge()
 	SendCommand(UPLOAD_CHARGE_COMMAND);
 	packetReceived = false;
 	startComTimeout = true;
-	//while(!packetReceived || !comTimeout); // Implement when com is working
 	while(1)
 	{
 		if((packetReceived) || (comTimeout)) break;
@@ -221,12 +220,12 @@ bool UploadFinishedCharge()
 	comTimeout = false;
 	if (packetReceived)
 	{
-		UART_Transmit_String("receiveBuffer content. Expected: %001Atrue*\n");
-		UART_Transmit_String(receiveBuffer); //Packet expected: %001Atrue*
+		//UART_Transmit_String("receiveBuffer content. Expected: %001Atrue*\n");
+		//UART_Transmit_String(receiveBuffer); //Packet expected: %001Atrue*
 		memcpy(passResult,receiveBuffer+5, 4);
 		passResult[4] = '\0';   /* null character manually added */
-		UART_Transmit_String("Acknowledge passResult content\n");
-		UART_Transmit_String(passResult);
+		//UART_Transmit_String("Acknowledge passResult content\n");
+		//UART_Transmit_String(passResult);
 		memset(receiveBuffer, '\0', sizeof(receiveBuffer));
 		if (strncmp (passResult,"true",4) == 0)
 		{
@@ -336,13 +335,13 @@ void BeginCharging()
 		}
 	}
 	keypadActive = false;
-	UART_Transmit_String("\nKr ");
+	//UART_Transmit_String("\nKr ");
 	sprintf(amountKr, "%04u", usedKr);
-	UART_Transmit_String(amountKr);
-	UART_Transmit_String("\nOere ");
+	//UART_Transmit_String(amountKr);
+	//UART_Transmit_String("\nOere ");
 	sprintf(amountOere, "%02u", usedOere);
-	UART_Transmit_String(amountOere);
-	UART_Transmit_String("\nTime in seconds");
+	//UART_Transmit_String(amountOere);
+	//UART_Transmit_String("\nTime in seconds");
 	sprintf(timeStamp, "%05u", timeChargedInSeconds);
-	UART_Transmit_String(timeStamp);
+	//UART_Transmit_String(timeStamp);
 }

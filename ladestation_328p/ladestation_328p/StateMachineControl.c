@@ -39,14 +39,14 @@ ISR(USART_RX_vect)
 
 ISR(TIMER1_COMPA_vect) // Comes every 1ms
 {
-	volatile static uint16_t count1Min = INTERVAL_MIN, count1Sec = INTERVAL_SEC,count9ms = INTERVAL_READKEYS, count100ms = INTERVAL_COM_TIMEOUT,count10Sec = INTERVAL_CONNECT_CAR_TIMEOUT;
+	volatile static uint16_t count1Min = INTERVAL_MIN, count1Sec = INTERVAL_SEC,count9ms = INTERVAL_READKEYS, count10S = INTERVAL_COM_TIMEOUT,count10Sec = INTERVAL_CONNECT_CAR_TIMEOUT;
 	if (chargingActive)
 	{
-		if ((--count1Sec) ==0)  // Do if 1 minus countSec = 0
+		if ((--count1Sec) ==0)  // Do if 1 minus count1Sec = 0
 		{
 			timeChargedInSeconds++;
 			count1Sec = INTERVAL_SEC; // 1000
-			takeSample = true;      // Set runSec to 1. Activating this function to be run next time
+			takeSample = true;      // Activating this function to be run next time
 		}
 	}
 	else count1Sec = INTERVAL_SEC;
@@ -63,20 +63,20 @@ ISR(TIMER1_COMPA_vect) // Comes every 1ms
 	
 	if (startComTimeout)
 	{
-		if ((--count100ms) ==0)  // Do if 1 minus count9ms = 0 and keypadActive = true
+		if ((--count10S) ==0)  // Do if 1 minus count10S = 0 and keypadActive = true
 		{
-			count100ms = INTERVAL_COM_TIMEOUT; //
-			comTimeout = true;      // Set readKeys to 1. Activating this function to be run next time
+			count10S = INTERVAL_COM_TIMEOUT; //
+			comTimeout = true;      // Activating this function to be run next time
 		}
 	}
-	else count100ms = INTERVAL_COM_TIMEOUT;
+	else count10S = INTERVAL_COM_TIMEOUT;
 
 	if (startConnectCarTimeout)
 	{
-		if ((--count10Sec) ==0)  // Do if 1 minus count9ms = 0 and keypadActive = true
+		if ((--count10Sec) ==0)  // Do if 1 minus count10Sec = 0 and keypadActive = true
 		{
 			count10Sec = INTERVAL_CONNECT_CAR_TIMEOUT; //
-			connectCarTimeout = true;      // Set readKeys to 1. Activating this function to be run next time
+			connectCarTimeout = true;      // Activating this function to be run next time
 		}
 	}
 	else count10Sec = INTERVAL_CONNECT_CAR_TIMEOUT;
@@ -86,7 +86,7 @@ ISR(TIMER1_COMPA_vect) // Comes every 1ms
 		if ((--count1Min) ==0)  // Do if 1 minus count9ms = 0 and keypadActive = true
 		{
 			count1Min = INTERVAL_MIN; //
-			tryConnect = true;      // Set readKeys to 1. Activating this function to be run next time
+			tryConnect = true;      // Activating this function to be run next time
 		}
 	}
 	else count1Min = INTERVAL_MIN;
@@ -95,13 +95,11 @@ ISR(TIMER1_COMPA_vect) // Comes every 1ms
 ISR(INT0_vect)
 {
 	if (!dataReady) cardPresent = true;
-	//UART_Transmit_String("card present");
 }
 
 ISR(INT1_vect)
 {
 	dataReady = true;
-	//UART_Transmit_String("data ready");
 }
 
 int main(void)

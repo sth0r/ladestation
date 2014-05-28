@@ -10,7 +10,6 @@
 #define DATACONTROL_H_
 #include <stdbool.h>
 extern void GetUID();
-//extern void SendCommand(char command);
 extern bool CardKnown();
 extern bool ValidatePassword();
 extern bool UploadFinishedCharge();
